@@ -59,7 +59,7 @@ function toLocalISOString(dateInput: string | Date): string {
 }
 
 
-const API_BASE = 'http://localhost:3001'; // ou seu baseUrl real
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const tasksApi = {
 
