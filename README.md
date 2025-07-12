@@ -70,7 +70,7 @@ Este projeto é o frontend de um sistema Todo, consumindo uma API local para ope
 Clone o repositório:
 
 ```bash
-git clone https://github.com/seuusuario/todo-frontend.git
+git clone https://github.com/VictorRochaSilva/todo-frontend.git
 cd todo-frontend
 ```
 
