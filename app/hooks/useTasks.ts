@@ -6,137 +6,198 @@ export const useTasks = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
+    const [searchText, setSearchText] = useState('');
     const [pagination, setPagination] = useState({
-        page: 1,
+        currentPage: 1,
         totalPages: 1,
-        total: 0
+        totalTasks: 0,
+    });
+    const [counts, setCounts] = useState({
+        all: 0,
+        pending: 0,
+        completed: 0,
     });
 
-    const fetchTasks = useCallback(async (filters: TasksFilters = {}) => {
+    const fetchCounts = useCallback(async () => {
         try {
-            setLoading(true);
-            setError(null);
-
-            const response = await tasksApi.getTasks({
-                page: 1,
-                limit: 100, // Buscar todas as tarefas para simplicidade
-                ...filters
-            });
-
-            // Converter strings de data para objetos Date
-            const tasksWithDates = response.tasks.map(task => ({
-                ...task,
-                dueDate: task.dueDate ? new Date(task.dueDate) : undefined
-            }));
-
-            setTodos(tasksWithDates);
-            setPagination({
-                page: response.page,
-                totalPages: response.totalPages,
-                total: response.total
+            const [allTasks, pendingTasks, completedTasks] = await Promise.all([
+                tasksApi.getTasks({ limit: 1 }),
+                tasksApi.getTasks({ limit: 1, completed: false }),
+                tasksApi.getTasks({ limit: 1, completed: true }),
+            ]);
+            setCounts({
+                all: allTasks.pagination.totalTasks,
+                pending: pendingTasks.pagination.totalTasks,
+                completed: completedTasks.pagination.totalTasks,
             });
         } catch (err) {
-            setError('Erro ao carregar tarefas. Verifique se a API está rodando.');
-            console.error('Error fetching tasks:', err);
-        } finally {
-            setLoading(false);
+            console.error('Error fetching counts:', err);
         }
     }, []);
 
-    const createTask = async (data: CreateTaskData): Promise<boolean> => {
-        try {
-            setError(null);
-            const newTask = await tasksApi.createTask(data);
+    const getFiltersForCurrentFilter = useCallback((): TasksFilters => {
+        const filters: TasksFilters = {};
+        if (currentFilter === 'pending') filters.completed = false;
+        else if (currentFilter === 'completed') filters.completed = true;
 
-            // Converter data se existir
-            const taskWithDate = {
-                ...newTask,
-                dueDate: newTask.dueDate ? new Date(newTask.dueDate) : undefined
-            };
+        if (searchText.trim()) filters.search = searchText.trim();
 
-            setTodos(prev => [taskWithDate, ...prev]);
-            return true;
-        } catch (err) {
-            setError('Erro ao criar tarefa');
-            console.error('Error creating task:', err);
-            return false;
-        }
-    };
+        return filters;
+    }, [currentFilter, searchText]);
 
-    const updateTask = async (id: string, data: UpdateTaskData): Promise<boolean> => {
-        try {
-            setError(null);
-            const updatedTask = await tasksApi.updateTask(id, data);
+    const fetchTasks = useCallback(
+        async (filters: TasksFilters = {}, resetPage = false) => {
+            try {
+                setLoading(true);
+                setError(null);
 
-            // Converter data se existir
-            const taskWithDate = {
-                ...updatedTask,
-                dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate) : undefined
-            };
+                const page = resetPage ? 1 : currentPage;
+                if (resetPage) setCurrentPage(1);
 
-            setTodos(prev => prev.map(task =>
-                task.id === id ? taskWithDate : task
-            ));
-            return true;
-        } catch (err) {
-            setError('Erro ao atualizar tarefa');
-            console.error('Error updating task:', err);
-            return false;
-        }
-    };
+                const response = await tasksApi.getTasks({
+                    page,
+                    limit: itemsPerPage,
+                    ...filters,
+                });
 
-    const deleteTask = async (id: string): Promise<boolean> => {
-        try {
-            setError(null);
-            await tasksApi.deleteTask(id);
-            setTodos(prev => prev.filter(task => task.id !== id));
-            return true;
-        } catch (err) {
-            setError('Erro ao excluir tarefa');
-            console.error('Error deleting task:', err);
-            return false;
-        }
-    };
+                const tasksWithDates = response.tasks.map((task) => ({
+                    ...task,
+                    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+                }));
 
-    const toggleTaskComplete = async (id: string): Promise<boolean> => {
-        const task = todos.find(t => t.id === id);
-        if (!task) return false;
+                setTodos(tasksWithDates);
+                setPagination({
+                    currentPage: Number(response.pagination.currentPage),
+                    totalPages: Number(response.pagination.totalPages),
+                    totalTasks: Number(response.pagination.totalTasks),
+                });
 
-        return updateTask(id, { completed: !task.completed });
-    };
+                await fetchCounts();
+            } catch (err) {
+                setError('Erro ao carregar tarefas. Verifique se a API está rodando.');
+                console.error('Error fetching tasks:', err);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [currentPage, itemsPerPage, fetchCounts]
+    );
 
-    const filterTasks = (filter: FilterType): Todo[] => {
-        switch (filter) {
-            case 'pending':
-                return todos.filter(todo => !todo.completed);
-            case 'completed':
-                return todos.filter(todo => todo.completed);
-            default:
-                return todos;
-        }
-    };
+    const applyFilter = useCallback(
+        async (filter: FilterType) => {
+            setCurrentFilter(filter);
+            setSearchText(''); // resetando busca ao mudar filtro
+            setCurrentPage(1);
 
-    const getCounts = () => ({
-        all: todos.length,
-        pending: todos.filter(todo => !todo.completed).length,
-        completed: todos.filter(todo => todo.completed).length
-    });
+            const filters: TasksFilters = {};
+            if (filter === 'pending') filters.completed = false;
+            else if (filter === 'completed') filters.completed = true;
+
+            await fetchTasks(filters, true);
+        },
+        [fetchTasks]
+    );
+
+    const applySearch = useCallback(
+        async (text: string) => {
+            setSearchText(text);
+            setCurrentPage(1);
+
+            const filters = getFiltersForCurrentFilter();
+
+            await fetchTasks(filters, true);
+        },
+        [fetchTasks, getFiltersForCurrentFilter]
+    );
+
+    const changePage = useCallback(
+        async (page: number) => {
+            setCurrentPage(page);
+            const filters = getFiltersForCurrentFilter();
+            await fetchTasks(filters);
+        },
+        [fetchTasks, getFiltersForCurrentFilter]
+    );
+
+    const changeItemsPerPage = useCallback(
+        async (newItemsPerPage: number) => {
+            setItemsPerPage(newItemsPerPage);
+            setCurrentPage(1);
+            const filters = getFiltersForCurrentFilter();
+            await fetchTasks(filters, true);
+        },
+        [fetchTasks, getFiltersForCurrentFilter]
+    );
 
     useEffect(() => {
-        fetchTasks();
-    }, [fetchTasks]);
+        fetchTasks(getFiltersForCurrentFilter(), false);
+    }, [fetchTasks, getFiltersForCurrentFilter]);
 
     return {
         todos,
         loading,
         error,
+        currentPage,
+        itemsPerPage,
         pagination,
-        createTask,
-        updateTask,
-        deleteTask,
-        toggleTaskComplete,
-        filterTasks,
-        getCounts,
-        refetch: fetchTasks
+        counts,
+        currentFilter,
+        searchText,
+        createTask: async (data: CreateTaskData) => {
+            try {
+                setError(null);
+                await tasksApi.createTask(data);
+                await fetchTasks(getFiltersForCurrentFilter(), true);
+                return true;
+            } catch (err) {
+                setError('Erro ao criar tarefa');
+                console.error('Error creating task:', err);
+                return false;
+            }
+        },
+        updateTask: async (id: string, data: UpdateTaskData) => {
+            try {
+                setError(null);
+                await tasksApi.updateTask(id, data);
+                await fetchTasks(getFiltersForCurrentFilter());
+                return true;
+            } catch (err) {
+                setError('Erro ao atualizar tarefa');
+                console.error('Error updating task:', err);
+                return false;
+            }
+        },
+        deleteTask: async (id: string) => {
+            try {
+                setError(null);
+                await tasksApi.deleteTask(id);
+                await fetchTasks(getFiltersForCurrentFilter());
+                return true;
+            } catch (err) {
+                setError('Erro ao excluir tarefa');
+                console.error('Error deleting task:', err);
+                return false;
+            }
+        },
+        toggleTaskComplete: async (id: string) => {
+            const task = todos.find((t) => t.id === id);
+            if (!task) return false;
+            try {
+                setError(null);
+                await tasksApi.updateTask(id, { completed: !task.completed });
+                await fetchTasks(getFiltersForCurrentFilter());
+                return true;
+            } catch {
+                return false;
+            }
+        },
+        applyFilter,
+        applySearch,
+        changePage,
+        changeItemsPerPage,
+        refetch: fetchTasks,
     };
 };

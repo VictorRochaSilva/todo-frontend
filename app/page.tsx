@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, ListTodo } from 'lucide-react';
 import { FilterType } from './types/Todo';
 import { TodoModal } from './components/TodoModal';
 import { TodoCard } from './components/TodoCard';
 import { FilterTabs } from './components/FilterTabs';
+import { Pagination } from './components/Pagination';
 import { ConfirmModal } from './components/ConfirmModal';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ErrorMessage } from './components/ErrorMessage';
@@ -16,16 +17,23 @@ function App() {
     todos,
     loading,
     error,
+    currentPage,
+    itemsPerPage,
+    pagination,
+    counts,
+    currentFilter,
+    searchText,
     createTask,
     updateTask,
     deleteTask,
     toggleTaskComplete,
-    filterTasks,
-    getCounts,
-    refetch
+    applyFilter,
+    applySearch,
+    changePage,
+    changeItemsPerPage,
+    refetch,
   } = useTasks();
 
-  const [filter, setFilter] = useState<FilterType>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<any>(undefined);
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -35,17 +43,38 @@ function App() {
   }>({
     isOpen: false,
     todoId: '',
-    todoTitle: ''
+    todoTitle: '',
   });
 
-  const filteredTodos = filterTasks(filter);
-  const counts = getCounts();
+  const [searchInput, setSearchInput] = useState(searchText);
+
+  // Quando o filtro mudar, resetar o input da busca local pra ficar sincronizado
+  useEffect(() => {
+    setSearchInput(searchText);
+  }, [searchText]);
+
+  // Debounce para busca
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // Só aplica busca se o valor do input for diferente do hook
+      if (searchInput !== searchText) {
+        applySearch(searchInput);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchInput, applySearch, searchText]);
+
+  const handleFilterChange = async (newFilter: FilterType) => {
+    setSearchInput(''); // limpa o campo local para ficar sincronizado com o hook
+    await applyFilter(newFilter);
+  };
 
   const handleCreateTodo = async (todoData: any) => {
     const success = await createTask({
       title: todoData.title,
       description: todoData.description,
-      dueDate: todoData.dueDate
+      dueDate: todoData.dueDate,
     });
 
     if (success) {
@@ -60,7 +89,7 @@ function App() {
       title: todoData.title,
       description: todoData.description,
       dueDate: todoData.dueDate,
-      completed: todoData.completed
+      completed: todoData.completed,
     });
 
     if (success) {
@@ -70,13 +99,13 @@ function App() {
   };
 
   const handleDeleteTodo = (id: string) => {
-    const todo = todos.find(t => t.id === id);
+    const todo = todos.find((t) => t.id === id);
     if (!todo) return;
 
     setConfirmDelete({
       isOpen: true,
       todoId: id,
-      todoTitle: todo.title
+      todoTitle: todo.title,
     });
   };
 
@@ -126,7 +155,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-blue-200">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
@@ -134,7 +163,7 @@ function App() {
             <div className="p-3 bg-orange-500 rounded-lg">
               <ListTodo className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">To-Do System</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Minhas Tarefas</h1>
           </div>
           <p className="text-gray-500">Organize suas tarefas de forma simples e eficiente</p>
         </div>
@@ -152,29 +181,44 @@ function App() {
 
         {/* Filter Tabs */}
         <div className="mb-6">
-          <FilterTabs
-            activeFilter={filter}
-            onFilterChange={setFilter}
-            counts={counts}
-          />
+          <FilterTabs activeFilter={currentFilter} onFilterChange={handleFilterChange} counts={counts} />
         </div>
+
+        {/* Search input */}
+        {pagination?.totalTasks > 0 && (
+          <div className="mb-6 w-full max-w-full">
+            <label htmlFor="search" className="block mb-1 text-gray-700 font-semibold">
+              Buscar por título
+            </label>
+            <input
+              id="search"
+              type="text"
+              placeholder="Digite para buscar..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="border rounded px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        )}
+
+
 
         {/* Todo List */}
         <div className="space-y-3">
-          {filteredTodos.length === 0 ? (
+          {todos.length === 0 ? (
             <div className="text-center py-12">
-              <ListTodo className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <ListTodo className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {filter === 'pending' ? 'Nenhuma tarefa pendente' :
-                  filter === 'completed' ? 'Nenhuma tarefa concluída' :
-                    'Nenhuma tarefa encontrada'}
+                {currentFilter === 'pending'
+                  ? 'Nenhuma tarefa pendente'
+                  : currentFilter === 'completed'
+                    ? 'Nenhuma tarefa concluída'
+                    : 'Nenhuma tarefa encontrada'}
               </h3>
-              <p className="text-gray-500">
-                {filter === 'all' && 'Comece criando sua primeira tarefa!'}
-              </p>
+              <p className="text-gray-500">{currentFilter === 'all' && 'Comece criando sua primeira tarefa!'}</p>
             </div>
           ) : (
-            filteredTodos.map(todo => (
+            todos.map((todo) => (
               <TodoCard
                 key={todo.id}
                 todo={todo}
@@ -185,6 +229,18 @@ function App() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {pagination?.totalTasks > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination?.totalPages}
+            totalItems={pagination?.totalTasks}
+            itemsPerPage={itemsPerPage}
+            onPageChange={changePage}
+            onItemsPerPageChange={changeItemsPerPage}
+          />
+        )}
       </div>
 
       {/* Modals */}

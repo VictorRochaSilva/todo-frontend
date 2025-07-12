@@ -25,30 +25,31 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({
     ];
 
     return (
-        <div className="flex bg-gray-100 rounded-lg p-1">
+        <div className="flex bg-blue-200 rounded-lg p-1 gap-1">
             {tabs.map((tab) => (
                 <button
                     key={tab.key}
                     onClick={() => onFilterChange(tab.key)}
                     className={`
-            flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-            ${activeFilter === tab.key
-                            ? 'bg-white text-blue-600 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+    flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+    ${activeFilter === tab.key
+                            ? 'bg-white text-orange-600 shadow-sm'
+                            : 'bg-gray-100 text-gray-600 hover:text-gray-900'
                         }
-          `}
+  `}
                 >
                     {tab.label}
                     <span className={`
-            ml-1 px-1.5 py-0.5 rounded-full text-xs
-            ${activeFilter === tab.key
-                            ? 'bg-blue-100 text-blue-600'
+    ml-1 px-1.5 py-0.5 rounded-full text-xs
+    ${activeFilter === tab.key
+                            ? 'bg-orange-100 text-orange-600'
                             : 'bg-gray-200 text-gray-600'
                         }
-          `}>
+  `}>
                         {tab.count}
                     </span>
                 </button>
+
             ))}
         </div>
     );
