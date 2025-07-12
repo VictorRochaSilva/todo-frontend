@@ -2,7 +2,7 @@ export interface Todo {
     id: string;
     title: string;
     description?: string;
-    dueDate?: Date;
+    dueDate?: string;
     completed: boolean;
 }
 

@@ -51,7 +51,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({
         onSave({
             title: formData.title.trim(),
             description: formData.description.trim() || undefined,
-            dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined,
+            dueDate: formData.dueDate || undefined,
             completed: formData.completed
         });
 

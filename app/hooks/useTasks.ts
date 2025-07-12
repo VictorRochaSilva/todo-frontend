@@ -63,12 +63,8 @@ export const useTasks = () => {
                     ...filters,
                 });
 
-                const tasksWithDates = response.tasks.map((task) => ({
-                    ...task,
-                    dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-                }));
+                setTodos(response.tasks);
 
-                setTodos(tasksWithDates);
                 setPagination({
                     currentPage: Number(response.pagination.currentPage),
                     totalPages: Number(response.pagination.totalPages),

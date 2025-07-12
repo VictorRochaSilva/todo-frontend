@@ -42,9 +42,28 @@ export interface UpdateTaskData {
     completed?: boolean;
 }
 
+function toLocalISOString(dateInput: string | Date): string {
+    let date: Date;
+
+    if (typeof dateInput === 'string') {
+        const [year, month, day] = dateInput.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+    } else if (dateInput instanceof Date) {
+        date = dateInput;
+    } else {
+        throw new Error('Invalid date input');
+    }
+
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString();
+}
+
+
 const API_BASE = 'http://localhost:3001'; // ou seu baseUrl real
 
 export const tasksApi = {
+
+
     async getTasks(filters: TasksFilters): Promise<GetTasksResponse> {
         const params = new URLSearchParams();
 
@@ -60,13 +79,23 @@ export const tasksApi = {
     },
 
     // Outros métodos, por exemplo:
-    async createTask(data: { title: string; description?: string; dueDate?: string }) {
-        const response = await axios.post<Todo>(`${API_BASE}/tasks`, data);
+    async createTask(data: CreateTaskData) {
+        const fixedData = {
+            ...data,
+            dueDate: data.dueDate ? toLocalISOString(data.dueDate) : undefined,
+        };
+
+        const response = await axios.post<Todo>(`${API_BASE}/tasks`, fixedData);
         return response.data;
     },
 
-    async updateTask(id: string, data: Partial<Omit<Todo, 'id'>>) {
-        const response = await axios.patch<Todo>(`${API_BASE}/tasks/${id}`, data);
+    async updateTask(id: string, data: UpdateTaskData) {
+        const fixedData = {
+            ...data,
+            dueDate: data.dueDate ? toLocalISOString(data.dueDate) : undefined,
+        };
+
+        const response = await axios.patch<Todo>(`${API_BASE}/tasks/${id}`, fixedData);
         return response.data;
     },
 
