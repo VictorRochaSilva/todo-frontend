@@ -58,12 +58,12 @@ export const Pagination: React.FC<PaginationProps> = ({
     return (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-lg border border-gray-200">
             {/* Items per page selector */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
                 <span>Mostrar:</span>
                 <select
                     value={itemsPerPage}
                     onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -74,7 +74,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             </div>
 
             {/* Page info */}
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-500">
                 Mostrando {startItem} a {endItem} de {totalItems} tarefas
             </div>
 
@@ -112,7 +112,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                                     className={`
                     px-3 py-2 rounded-md text-sm font-medium transition-colors
                     ${currentPage === page
-                                            ? 'bg-blue-600 text-white'
+                                            ? 'bg-orange-500 text-white'
                                             : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
                                         }
                   `}

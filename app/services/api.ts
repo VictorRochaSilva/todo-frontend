@@ -66,7 +66,7 @@ export const tasksApi = {
     },
 
     async updateTask(id: string, data: Partial<Omit<Todo, 'id'>>) {
-        const response = await axios.put<Todo>(`${API_BASE}/tasks/${id}`, data);
+        const response = await axios.patch<Todo>(`${API_BASE}/tasks/${id}`, data);
         return response.data;
     },
 
