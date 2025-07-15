@@ -163,7 +163,7 @@ function App() {
             <div className="p-3 bg-orange-500 rounded-lg">
               <ListTodo className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Minhas Tarefas</h1>
+            <h1 className="text-3xl font-bold text-gray-900">To-Do</h1>
           </div>
           <p className="text-gray-500">Organize suas tarefas de forma simples e eficiente</p>
         </div>
