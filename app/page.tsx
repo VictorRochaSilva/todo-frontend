@@ -154,6 +154,8 @@ function App() {
     );
   }
 
+  const isSearching = searchInput.trim().length > 0;
+
   return (
     <div className="min-h-screen bg-blue-200">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -184,24 +186,19 @@ function App() {
           <FilterTabs activeFilter={currentFilter} onFilterChange={handleFilterChange} counts={counts} />
         </div>
 
-        {/* Search input */}
-        {pagination?.totalTasks > 0 && (
-          <div className="mb-6 w-full max-w-full">
-            <label htmlFor="search" className="block mb-1 text-gray-700 font-semibold">
-              Buscar por título
-            </label>
-            <input
-              id="search"
-              type="text"
-              placeholder="Digite para buscar..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="border rounded px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-        )}
-
-
+        <div className="mb-6 w-full max-w-full">
+          <label htmlFor="search" className="block mb-1 text-gray-700 font-semibold">
+            Buscar por título
+          </label>
+          <input
+            id="search"
+            type="text"
+            placeholder="Digite para buscar..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="border rounded px-3 py-2 text-sm w-full bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
 
         {/* Todo List */}
         <div className="space-y-3">
@@ -209,13 +206,19 @@ function App() {
             <div className="text-center py-12">
               <ListTodo className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {currentFilter === 'pending'
-                  ? 'Nenhuma tarefa pendente'
-                  : currentFilter === 'completed'
-                    ? 'Nenhuma tarefa concluída'
-                    : 'Nenhuma tarefa encontrada'}
+                {isSearching ? (
+                  <>Nenhum resultado encontrado para "{searchInput}"</>
+                ) : currentFilter === 'pending' ? (
+                  'Nenhuma tarefa pendente'
+                ) : currentFilter === 'completed' ? (
+                  'Nenhuma tarefa concluída'
+                ) : (
+                  'Nenhuma tarefa encontrada'
+                )}
               </h3>
-              <p className="text-gray-500">{currentFilter === 'all' && 'Comece criando sua primeira tarefa!'}</p>
+              {!isSearching && currentFilter === 'all' && (
+                <p className="text-gray-500">Comece criando sua primeira tarefa!</p>
+              )}
             </div>
           ) : (
             todos.map((todo) => (
